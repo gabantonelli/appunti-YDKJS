@@ -130,7 +130,70 @@ quando una qualsiasi funzione viene chiamata con un new davanti succede questo:
 1. La funzione è invocata con `new`? se sì, il nuovo oggetto è `this`
 1. La funzione è invocata con `call` oppure `apply` (*explicit binding*)? se sì allora `this` è l'oggetto che passiamo noi
 1. La funzione è chiamata come metodo di un oggetto (*implicit binding*)? se sì allora `this` corrisponde all'oggetto in questione
-1. Altrimenti this corrisponde all'oggetto global (*default bidding*), oppure a undefined in caso di "strict mode"
+1. Altrimenti this corrisponde all'oggetto global (*default binding*), oppure a undefined in caso di "strict mode"
 
 ## Binding Exceptions
+
 ### Ignored `this`
+
+se passiamo null, o undefined al metodo call, apply o bind, si applica il default binding
+
+### Safer `this`
+a volte per sicurezza, quando non ci interessa passare l'oggetto ma solo i parametri (es. currying di funzioni), possiamo usare null oppure un oggetto vuoto creato apposta: 
+```
+function foo(a,b) {
+	console.log( "a:" + a + ", b:" + b );
+}
+
+// our DMZ empty object
+var ø = Object.create( null );
+
+// spreading out array as parameters
+foo.apply( ø, [2, 3] ); // a:2, b:3
+
+// currying with `bind(..)`
+var bar = foo.bind( ø, 2 );
+bar( 3 ); // a:2, b:3
+```
+### Indirection
+Bisogna fare attenzione a non creare references indirette alle funzioni, altrimenti si va a applicare il default binding. Vediamo l'esempio:
+```
+function foo() {
+	console.log( this.a );
+}
+
+var a = 2;
+var o = { a: 3, foo: foo };
+var p = { a: 4 };
+
+o.foo(); // 3
+(p.foo = o.foo)(); // 2
+```
+
+l'ultima riga di codice assegna a p.foo non a o.foo ma direttamente alla funzione sotto di essa, e invocandola lì chiamiamo direttamente la funzione, quindi si applica il default binding.
+
+### Lexical `this`
+E6 ha introdotto un tipo di funzione che non sta a queste 4 regole di binding: la funzione fat arrow =>
+
+Con questo tipo di funzione il this non dipende dalle 4 regole, ma dall'enclosing scope.
+
+```
+function foo() {
+    //restituisce una arrow function
+    return (a) => {
+        // 'this' qui è adottato lessicalmente da 'foo()' perchè sta nel suo blocco
+        console.log( this.a );
+    }
+}
+
+var obj1 = {
+    a: 2
+}
+
+var obj2 = {
+    a:3
+}
+
+var bar = foo.call(obj1); 
+bar.call(obj2); // 2 non 3!!
+```
