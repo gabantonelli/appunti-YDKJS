@@ -194,10 +194,54 @@ Quando richiediamo una proprietà ad esempio myObj.a viene effettuata una richie
 
 ### [[Put]]
 Se la proprietà è già presente:
-1. La proprietà è un accessor descriptor? Se sì invoca il setter se c'è.
+1. La proprietà è un accessor descriptor (una proprietà che ha un getter o setter)? Se sì invoca il setter se c'è.
 1. La proprietà è writable:false? Se in non-strict mode errore silenzioso, in strict-mode TypeError
 1. Altrimenti assegna il valore normalmente.
+
 Se la proprietà invece non è presente:
 Comportamento complesso che vedremo nel Capitolo 5.
 
-### Getter & Setters
+### Getters & Setters
+E' possibile fare un override del [[Get]] e [[Put]] sulle proprietà di un oggetto tramite delle funzioni "getters" (per il [[Get]]) e "setters" (per il [[Put]]);
+
+La sintassi get  associa una proprietà dell'oggetto a una funzione che verrà chiamata quando la proprietà verrà richiesta.
+
+```
+var myObject = {
+	// define a getter for `a`
+	get a() {		//a è una funzione la dovrei richiamare con myObject.a() -> siccome ho impostato getter
+					// posso fare myObject.a
+		return 2;
+	}
+};
+
+Object.defineProperty(
+	myObject,	// target
+	"b",		// property name
+	{			// descriptor
+		// define a getter for `b`
+		get: function(){ return this.a * 2 },
+
+		// make sure `b` shows up as an object property
+		enumerable: true
+	}
+);
+
+myObject.a; // 2
+
+myObject.b; // 4
+```
+```
+var myObject = {
+	// define a getter for `a`
+	get a() {
+		return 2;
+	}
+};
+
+myObject.a = 3;
+
+myObject.a; // 2
+```
+myOject.a corrisponde già alla nostra funzione getter quindi se provo a settarla con myObject.a = 3; ci sarà un
+silent error e la proprietà non verrà sovrascritta
