@@ -111,3 +111,93 @@ myArray.baz;	// "baz"
 da notare abbiamo aggiunto una proprietà baz, che però rimane separta dagli elementi dell'array. non vanno confuse le cose, infatti la lenght dell'array rimane 3. E' suggeribile non usare numeri però come chiave della proprietà, altrimenti si crea confusione con gli elementi dell'array chiamando myArray[3] uno e myArray['3'] l'altro.
 
 ### Duplicating Objects
+Quando si dice come si duplica un oggetto, non si sa bene cosa si voglia fare. Fare una copia delle referenze, e se queste a loro volta hanno altre referenze? Si fa la copia anche di quelle?
+
+Una soluzione riconosciuta per gli oggetti, che sono JSON-safe è quella di convertire l'oggetto in stringa JSON e poi riconvertire la stringa JSON in un nuovo oggetto.
+
+```
+var newObj = JSON.parse(JSON.stringfy(oldObj));
+```
+
+ES6 ha introdotto una copia "leggera" degli oggetti con la proprietà Object.assing(...). I parametri sono prima un oggetto target, in cui scrivere, e poi altri oggetti che vogliamo copiare nel nostro target. I dati primitivi sono copiati per valore, gli oggetti sono copiati per referenza. Quindi coincidono con i dati dell'oggetto o degli oggetti originali.
+
+```
+var newObj = Object.assign({}, oldObj);
+```
+
+### Property Descriptors
+```
+a partire dalla versione ES5 di JS possiamo accedere alle impostazioni delle proprietà di un oggetto: 
+var myObject = {
+	a: 2
+};
+
+Object.getOwnPropertyDescriptor( myObject, "a" );
+// {
+//    value: 2,
+//    writable: true,
+//    enumerable: true,
+//    configurable: true
+// }
+```
+Per cambiare questi valori writable, enumerable,configurable possiamo usare Object.defineProperty
+```
+var myObject = {};
+
+Object.defineProperty( myObject, "a", {
+	value: 2,
+	writable: true,
+	configurable: true,
+	enumerable: true
+} );
+
+myObject.a; // 2
+```
+#### Writable
+se una proprietà non è writable, non è possibile modificarla. In normal mode non ci sono errori, ma la proprietà rimane invariata, in strict mode invece abbiamo proprio un errore (TypeError)
+
+#### Configurable
+Se una proprietà non è configurable, non possiamo usare Object.defineProperty per cambiare i suoi Property Descriptors writable, configurable, enumerable, se ci proviamo otteniamo un TypeError
+
+#### Enumerable
+tiene fuori o include la proprietà dalle iterazioni in ciclo for..in
+
+### Immutability
+ES5 ha introdotto dei modi di rendere gli oggetti immodificabili, con qualche piccola differenza uno dall'altro.
+
+Nota bene che se rendiamo un oggetto o una sua proprietà immutabile, rimane fissa solo la sua referenza, se ad esempio si tratta di un array, o di una funzione, questo array o funzione rimangono modificabili. 
+
+#### Object Constant
+se combiniamo di descriptors writable:false e configurable:false, si crea una costante, la proprietà non può essere cambiata, ridefinita o cancellata
+
+#### Prevent Extensions
+Possiamo impedire all'oggetto di aggiungere nuove proprietà. Quelle già presenti rimangono presenti e modificabili.
+```
+var myObj = {
+	a: 2
+};
+
+Object.preventExtensions( myObject );
+
+myObject.b = 3;
+myObject.b; // undefined
+```
+
+#### Seal
+Object.seal(...), applica su un oggetto preventExtensions che abbiamo visto prima, e configura tutte le proprietà in configurable:false. Quindi non sarà possibile cambiare descriptors alle proprietà presenti, e non sarà possibile aggiungere nuove proprietà
+
+#### Freeze
+Object.freeze(...) non solo applica seal e tutte le sue conseguenze, ma rende anche le proprietà writable:false. Quindi sarà impossibile anche ridefinire le proprietà esistenti. E' il tipo di Immutability più forte.
+
+### [[Get]]
+Quando richiediamo una proprietà ad esempio myObj.a viene effettuata una richiesta [[Get]] sull'oggetto. Se una proprietà non viene trovata il [[Get]] restituisce `undefined` che ricordiamoci è diverso da quando invece non veniva trovata una variabile e ottenevamo un `ReferenceError`.
+
+### [[Put]]
+Se la proprietà è già presente:
+1. La proprietà è un accessor descriptor? Se sì invoca il setter se c'è.
+1. La proprietà è writable:false? Se in non-strict mode errore silenzioso, in strict-mode TypeError
+1. Altrimenti assegna il valore normalmente.
+Se la proprietà invece non è presente:
+Comportamento complesso che vedremo nel Capitolo 5.
+
+### Getter & Setters
