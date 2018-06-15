@@ -2,13 +2,13 @@
 # Chapter 4: Mixing (Up) "Class" Objects
 
 ## Class Theory
-L'Object Oriented (OO) or Class Oriented programming, si basa sul concetto secondo noi "generalizziamo" un concetto e gli applichiamo delle caratteristiche comuni, che non ha senso riscrivere ogni volta.
+L'Object Oriented (OO) or Class Oriented programming, è solo uno dei possibili approcci di programmazione. Si basa sul concetto secondo cui possiamo "generalizzare" dei concetti similari e applicargli delle proprietà e dei metodi che hanno in comune, che non ha senso riscrivere ogni volta.
 
-Es. il tipo di dato String. Queste stringhe ogni volta saranno un dato diverso, ma sappiamo che in genere quello che ci può sempre interessare è il VALORE, un METODO per sapere la LENGTH, un Metodo per aggiungere in coda qualcosa... se ho un oggetto String saprò che potrò sempre applicare quegli stessi metodi, senza doverli riscrivere per ogni stringa.
+Es. il tipo di dato String. Queste stringhe ogni volta saranno un dato diverso, ma sappiamo che sono non ci interessa spesso solo il VALORE, ma un METODO per sapere la LENGTH, un Metodo per aggiungere in coda qualcosa... se ho un oggetto String saprò che potrò sempre applicare quegli stessi metodi, senza doverli riscrivere per ogni stringa.
 
-Altro concetto è l'inheritance. Definiamo la classe Macchina, perchè può avere 2,4 o 5 posti, 4 ruote, un metodo per trasportare le persone. Ma la macchina a sua volta può essere una sottoclasse di un concetto Veicolo, che ha un motore, un carburante, un metodo per essere guidato.
+Altro concetto tipico della programmazione ad oggetti è l'inheritance. Definiamo la classe Macchina, perchè può avere 2,4 o 5 posti, 4 ruote, un metodo per trasportare le persone. Ma la macchina a sua volta può essere una sottoclasse di un concetto Veicolo, che ha un motore, un carburante, un metodo per essere guidato. Nei linguaggi OOP creo una classe Macchina figlia di una classe parent Veicolo e quindi erediterà da Veicolo tutti i suoi metodi e le sue proprietà.
 
-`Polimorfismo` vuol dire che la sottoclasse, la classe figlia, può fare un override di un metodo della categoria madre. Quindi Veicolo e Macchina possono avere un metodo che ha lo stesso nome es. Accensione, ma quando creo una istanza di Macchina, il metodo accensione() di Macchina è più specifico, e sovrascrive il metodo accensione() di Veicolo.
+Altra caratteristica dell'OOP è il `Polimorfismo`. Vuol dire che la sottoclasse, la classe figlia, può fare un override di un metodo della categoria madre. Quindi Veicolo e Macchina possono avere un metodo che ha lo stesso nome es. Accensione, ma quando creo una istanza di Macchina, il metodo accensione() di Macchina è più specifico, e sovrascrive il metodo accensione() di Veicolo. Esiste sempre poi il modo per richiamare il metodo super o inherited della Classe parent, con un polimorfismo che si dice RELATIVO, perchè senza fare un richiamo ASSOLUTO alla funzione, gli dico di riferirsi alla funzione genitore.
 
 ## Javascript "Classes"
 Javascript ha davvero le classi? NO.
@@ -71,11 +71,10 @@ Javascript non consente la multiple inheritance.
 
 ## Mixins
 In javascript come abbiamo visto non esiste il concetto di classe astratta che diventa concreta in un oggetto che la copia. In javascript in realtà non esistono Classi, ma solo oggetti, e gli oggetti non si copiano mai davvero, sono copie per reference.
-
-Allora come fanno gli sviluppatori JS a simulare questa copia classe->oggetto? Esistono due tipi di "mixin": esplicito e implicito
+Per cercare di simulare questi comportamenti visti dell'OOP, gli sviluppatori JS hanno creato dei pattern che in qualche modo adattano il JS (con risultati non perfetti) alla programmazione a oggetti.
 
 ### Explicit Mixins
-Creaiamo un'utility che di solito si chiama `extend()` ma qui chiamiamo mixin che copia manualmente le proprietà degli oggetti:
+Definiamo qui un'utility che alcuni a volte chiamano `extend()` ma qui chiamiamo mixin, che copia manualmente le proprietà degli oggetti:
 ```
 function mixin( sourceObj, targetObj ) {
 	for (var key in sourceObj) {
@@ -113,3 +112,72 @@ var Car = mixin( Vehicle, {
 Ricordiamo che stiamo facendo una copia di oggetti, non esistono classi in Javascript. le proprietà vengono copiate per valore, le funzioni invece vengono copiate per reference;
 
 ### "Polymorphism" Revisited
+Ora entrambe gli oggetti Vehicle e Car hanno una proprietà drive. Non è previsto in JS un metodo per un relative polymorphism, cioè dire prendi la funzione dalla classe madre. Dobbiamo usare il polimorfismo assoluto e se vogliamo che car.drive() usi la funzione di Vehicle, dobbiamo specificare noi Vehicle.drive e passare con il metodo call l'oggetto a cui vogliamo si riferisca.```Vehicle.drive.call( this );```
+
+### Mixing Copies
+questo approccio visto di fatto mischia le proprietà di due oggetti, e non procede a fare nessuna vera copia di oggetti (e quindi anche funzioni) perchè di fatto non è una cosa prevista e dal comportamento affidabile in JS. Gli oggetti si copiano solo tramite reference, e quindi rimangono sistemi delicati, perchè si può sempre modificare una funzione da una parte e avere risultati inattesi.
+
+### Parasitic Inheritance
+Una variante della funzione vista in precedenza per il mixin può essere questo approccio:
+```
+// "Traditional JS Class" `Vehicle`
+function Vehicle() {
+	this.engines = 1;
+}
+Vehicle.prototype.ignition = function() {
+	console.log( "Turning on my engine." );
+};
+Vehicle.prototype.drive = function() {
+	this.ignition();
+	console.log( "Steering and moving forward!" );
+};
+
+// "Parasitic Class" `Car`
+function Car() {
+	// first, `car` is a `Vehicle`
+	var car = new Vehicle();
+
+	// now, let's modify our `car` to specialize it
+	car.wheels = 4;
+
+	// save a privileged reference to `Vehicle::drive()`
+	var vehDrive = car.drive;
+
+	// override `Vehicle::drive()`
+	car.drive = function() {
+		vehDrive.call( this );
+		console.log( "Rolling on all " + this.wheels + " wheels!" );
+	};
+
+	return car;
+}
+
+var myCar = new Car();
+
+myCar.drive();
+```
+### Implicit Mixins
+si tratta di un altro pattern per simulare i comportamenti dell'OOP di altri linguaggi
+```
+var Something = {
+	cool: function() {
+		this.greeting = "Hello World";
+		this.count = this.count ? this.count + 1 : 1;
+	}
+};
+
+Something.cool();
+Something.greeting; // "Hello World"
+Something.count; // 1
+
+var Another = {
+	cool: function() {
+		// implicit mixin of `Something` to `Another`
+		Something.cool.call( this );
+	}
+};
+
+Another.cool();
+Another.greeting; // "Hello World"
+Another.count; // 1 (not shared state with `Something`)
+```
